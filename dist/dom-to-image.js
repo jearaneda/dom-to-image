@@ -4,18 +4,16 @@
   var util = newUtil();
   var inliner = newInliner();
   var fontFaces = newFontFaces();
-  var images = newImages();
+  var images = newImages(); // Default impl options
 
-  // Default impl options
   var defaultOptions = {
     // Default is to fail on error, no placeholder
     imagePlaceholder: undefined,
     // Default cache bust is false, it will use the cache
     cacheBust: false,
     // Default cors config is to request the image address directly
-    corsImg: undefined,
+    corsImg: undefined
   };
-
   var domtoimage = {
     toSvg: toSvg,
     toPng: toPng,
@@ -27,13 +25,10 @@
       images: images,
       util: util,
       inliner: inliner,
-      options: {},
-    },
+      options: {}
+    }
   };
-
-  if (typeof module !== 'undefined') module.exports = domtoimage;
-  else global.domtoimage = domtoimage;
-
+  if (typeof module !== 'undefined') module.exports = domtoimage;else global.domtoimage = domtoimage;
   /**
      * @param {Node} node - The DOM Node object to render
      * @param {Object} options - Rendering options
@@ -55,80 +50,70 @@
      *         - @param {Object} headers - eg: { "Content-Type", "application/json;charset=UTF-8" }
      *         - @param {Object} data - post payload
      * */
+
   function toSvg(node, options) {
     options = options || {};
     copyOptions(options);
-    return Promise.resolve(node)
-      .then(function (node) {
-        return cloneNode(node, options.filter, true);
-      })
-      .then(embedFonts)
-      .then(inlineImages)
-      .then(applyOptions)
-      .then(function (clone) {
-        return makeSvgDataUri(
-          clone,
-          options.width || util.width(node),
-          options.height || util.height(node)
-        );
-      });
+    return Promise.resolve(node).then(function (node) {
+      return cloneNode(node, options.filter, true);
+    }).then(embedFonts).then(inlineImages).then(applyOptions).then(function (clone) {
+      return makeSvgDataUri(clone, options.width || util.width(node), options.height || util.height(node));
+    });
 
     function applyOptions(clone) {
       if (options.bgcolor) clone.style.backgroundColor = options.bgcolor;
-
       if (options.width) clone.style.width = options.width + 'px';
       if (options.height) clone.style.height = options.height + 'px';
-
-      if (options.style)
-        Object.keys(options.style).forEach(function (property) {
-          clone.style[property] = options.style[property];
-        });
-
+      if (options.style) Object.keys(options.style).forEach(function (property) {
+        clone.style[property] = options.style[property];
+      });
       return clone;
     }
   }
-
   /**
    * @param {Node} node - The DOM Node object to render
    * @param {Object} options - Rendering options, @see {@link toSvg}
    * @return {Promise} - A promise that is fulfilled with a Uint8Array containing RGBA pixel data.
    * */
+
+
   function toPixelData(node, options) {
     return draw(node, options || {}).then(function (canvas) {
-      return canvas
-        .getContext('2d')
-        .getImageData(0, 0, util.width(node), util.height(node)).data;
+      return canvas.getContext('2d').getImageData(0, 0, util.width(node), util.height(node)).data;
     });
   }
-
   /**
    * @param {Node} node - The DOM Node object to render
    * @param {Object} options - Rendering options, @see {@link toSvg}
    * @return {Promise} - A promise that is fulfilled with a PNG image data URL
    * */
+
+
   function toPng(node, options) {
     return draw(node, options || {}).then(function (canvas) {
       return canvas.toDataURL();
     });
   }
-
   /**
    * @param {Node} node - The DOM Node object to render
    * @param {Object} options - Rendering options, @see {@link toSvg}
    * @return {Promise} - A promise that is fulfilled with a JPEG image data URL
    * */
+
+
   function toJpeg(node, options) {
     options = options || {};
     return draw(node, options).then(function (canvas) {
       return canvas.toDataURL('image/jpeg', options.quality || 1.0);
     });
   }
-
   /**
    * @param {Node} node - The DOM Node object to render
    * @param {Object} options - Rendering options, @see {@link toSvg}
    * @return {Promise} - A promise that is fulfilled with a PNG image blob
    * */
+
+
   function toBlob(node, options) {
     return draw(node, options || {}).then(util.canvasToBlob);
   }
@@ -136,8 +121,7 @@
   function copyOptions(options) {
     // Copy options to impl options for use in impl
     if (typeof options.imagePlaceholder === 'undefined') {
-      domtoimage.impl.options.imagePlaceholder =
-        defaultOptions.imagePlaceholder;
+      domtoimage.impl.options.imagePlaceholder = defaultOptions.imagePlaceholder;
     } else {
       domtoimage.impl.options.imagePlaceholder = options.imagePlaceholder;
     }
@@ -156,14 +140,11 @@
   }
 
   function draw(domNode, options) {
-    return toSvg(domNode, options)
-      .then(util.makeImage)
-      .then(util.delay(100))
-      .then(function (image) {
-        var canvas = newCanvas(domNode);
-        canvas.getContext('2d').drawImage(image, 0, 0);
-        return canvas;
-      });
+    return toSvg(domNode, options).then(util.makeImage).then(util.delay(100)).then(function (image) {
+      var canvas = newCanvas(domNode);
+      canvas.getContext('2d').drawImage(image, 0, 0);
+      return canvas;
+    });
 
     function newCanvas(domNode) {
       var canvas = document.createElement('canvas');
@@ -182,42 +163,32 @@
 
   function cloneNode(node, filter, root) {
     if (!root && filter && !filter(node)) return Promise.resolve();
-
-    return Promise.resolve(node)
-      .then(makeNodeCopy)
-      .then(function (clone) {
-        return cloneChildren(node, clone, filter);
-      })
-      .then(function (clone) {
-        return processClone(node, clone);
-      });
+    return Promise.resolve(node).then(makeNodeCopy).then(function (clone) {
+      return cloneChildren(node, clone, filter);
+    }).then(function (clone) {
+      return processClone(node, clone);
+    });
 
     function makeNodeCopy(node) {
-      if (node instanceof HTMLCanvasElement)
-        return util.makeImage(node.toDataURL());
+      if (node instanceof HTMLCanvasElement) return util.makeImage(node.toDataURL());
       return node.cloneNode(false);
     }
 
     function cloneChildren(original, clone, filter) {
       var children = original.childNodes;
       if (children.length === 0) return Promise.resolve(clone);
-
-      return cloneChildrenInOrder(clone, util.asArray(children), filter).then(
-        function () {
-          return clone;
-        }
-      );
+      return cloneChildrenInOrder(clone, util.asArray(children), filter).then(function () {
+        return clone;
+      });
 
       function cloneChildrenInOrder(parent, children, filter) {
         var done = Promise.resolve();
         children.forEach(function (child) {
-          done = done
-            .then(function () {
-              return cloneNode(child, filter);
-            })
-            .then(function (childClone) {
-              if (childClone) parent.appendChild(childClone);
-            });
+          done = done.then(function () {
+            return cloneNode(child, filter);
+          }).then(function (childClone) {
+            if (childClone) parent.appendChild(childClone);
+          });
         });
         return done;
       }
@@ -225,30 +196,19 @@
 
     function processClone(original, clone) {
       if (!(clone instanceof Element)) return clone;
-
-      return Promise.resolve()
-        .then(cloneStyle)
-        .then(clonePseudoElements)
-        .then(copyUserInput)
-        .then(fixSvg)
-        .then(function () {
-          return clone;
-        });
+      return Promise.resolve().then(cloneStyle).then(clonePseudoElements).then(copyUserInput).then(fixSvg).then(function () {
+        return clone;
+      });
 
       function cloneStyle() {
         copyStyle(window.getComputedStyle(original), clone.style);
 
         function copyStyle(source, target) {
-          if (source.cssText) target.cssText = source.cssText;
-          else copyProperties(source, target);
+          if (source.cssText) target.cssText = source.cssText;else copyProperties(source, target);
 
           function copyProperties(source, target) {
             util.asArray(source).forEach(function (name) {
-              target.setProperty(
-                name,
-                source.getPropertyValue(name),
-                source.getPropertyPriority(name)
-              );
+              target.setProperty(name, source.getPropertyValue(name), source.getPropertyPriority(name));
             });
           }
         }
@@ -262,22 +222,16 @@
         function clonePseudoElement(element) {
           var style = window.getComputedStyle(original, element);
           var content = style.getPropertyValue('content');
-
           if (content === '' || content === 'none') return;
-
           var className = util.uid();
           clone.className = clone.className + ' ' + className;
           var styleElement = document.createElement('style');
-          styleElement.appendChild(
-            formatPseudoElementStyle(className, element, style)
-          );
+          styleElement.appendChild(formatPseudoElementStyle(className, element, style));
           clone.appendChild(styleElement);
 
           function formatPseudoElementStyle(className, element, style) {
             var selector = '.' + className + ':' + element;
-            var cssText = style.cssText
-              ? formatCssText(style)
-              : formatCssProperties(style);
+            var cssText = style.cssText ? formatCssText(style) : formatCssProperties(style);
             return document.createTextNode(selector + '{' + cssText + '}');
 
             function formatCssText(style) {
@@ -289,12 +243,7 @@
               return util.asArray(style).map(formatProperty).join('; ') + ';';
 
               function formatProperty(name) {
-                return (
-                  name +
-                  ': ' +
-                  style.getPropertyValue(name) +
-                  (style.getPropertyPriority(name) ? ' !important' : '')
-                );
+                return name + ': ' + style.getPropertyValue(name) + (style.getPropertyPriority(name) ? ' !important' : '');
               }
             }
           }
@@ -302,21 +251,17 @@
       }
 
       function copyUserInput() {
-        if (original instanceof HTMLTextAreaElement)
-          clone.innerHTML = original.value;
-        if (original instanceof HTMLInputElement)
-          clone.setAttribute('value', original.value);
+        if (original instanceof HTMLTextAreaElement) clone.innerHTML = original.value;
+        if (original instanceof HTMLInputElement) clone.setAttribute('value', original.value);
       }
 
       function fixSvg() {
         if (!(clone instanceof SVGElement)) return;
         clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
         if (!(clone instanceof SVGRectElement)) return;
         ['width', 'height'].forEach(function (attribute) {
           var value = clone.getAttribute(attribute);
           if (!value) return;
-
           clone.style.setProperty(attribute, value);
         });
       }
@@ -339,33 +284,16 @@
   }
 
   function makeSvgDataUri(node, width, height) {
-    return Promise.resolve(node)
-      .then(function (node) {
-        node.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-        return new XMLSerializer().serializeToString(node);
-      })
-      .then(util.escapeXhtml)
-      .then(function (xhtml) {
-        return (
-          '<foreignObject x="0" y="0" width="100%" height="100%">' +
-          xhtml +
-          '</foreignObject>'
-        );
-      })
-      .then(function (foreignObject) {
-        return (
-          '<svg xmlns="http://www.w3.org/2000/svg" width="' +
-          width +
-          '" height="' +
-          height +
-          '">' +
-          foreignObject +
-          '</svg>'
-        );
-      })
-      .then(function (svg) {
-        return 'data:image/svg+xml;charset=utf-8,' + svg;
-      });
+    return Promise.resolve(node).then(function (node) {
+      node.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      return new XMLSerializer().serializeToString(node);
+    }).then(util.escapeXhtml).then(function (xhtml) {
+      return '<foreignObject x="0" y="0" width="100%" height="100%">' + xhtml + '</foreignObject>';
+    }).then(function (foreignObject) {
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' + foreignObject + '</svg>';
+    }).then(function (svg) {
+      return 'data:image/svg+xml;charset=utf-8,' + svg;
+    });
   }
 
   function newUtil() {
@@ -384,7 +312,7 @@
       escapeXhtml: escapeXhtml,
       makeImage: makeImage,
       width: width,
-      height: height,
+      height: height
     };
 
     function mimes() {
@@ -394,7 +322,6 @@
        */
       var WOFF = 'application/font-woff';
       var JPEG = 'image/jpeg';
-
       return {
         woff: WOFF,
         woff2: WOFF,
@@ -405,14 +332,13 @@
         jpeg: JPEG,
         gif: 'image/gif',
         tiff: 'image/tiff',
-        svg: 'image/svg+xml',
+        svg: 'image/svg+xml'
       };
     }
 
     function parseExtension(url) {
       var match = /\.([^\.\/]*?)$/g.exec(url);
-      if (match) return match[1];
-      else return '';
+      if (match) return match[1];else return '';
     }
 
     function mimeType(url) {
@@ -430,23 +356,18 @@
         var length = binaryString.length;
         var binaryArray = new Uint8Array(length);
 
-        for (var i = 0; i < length; i++)
-          binaryArray[i] = binaryString.charCodeAt(i);
+        for (var i = 0; i < length; i++) binaryArray[i] = binaryString.charCodeAt(i);
 
-        resolve(
-          new Blob([binaryArray], {
-            type: 'image/png',
-          })
-        );
+        resolve(new Blob([binaryArray], {
+          type: 'image/png'
+        }));
       });
     }
 
     function canvasToBlob(canvas) {
-      if (canvas.toBlob)
-        return new Promise(function (resolve) {
-          canvas.toBlob(resolve);
-        });
-
+      if (canvas.toBlob) return new Promise(function (resolve) {
+        canvas.toBlob(resolve);
+      });
       return toBlob(canvas);
     }
 
@@ -463,15 +384,12 @@
 
     function uid() {
       var index = 0;
-
       return function () {
         return 'u' + fourRandomChars() + index++;
 
         function fourRandomChars() {
           /* see http://stackoverflow.com/a/6248722/2519373 */
-          return (
-            '0000' + ((Math.random() * Math.pow(36, 4)) << 0).toString(36)
-          ).slice(-4);
+          return ('0000' + (Math.random() * Math.pow(36, 4) << 0).toString(36)).slice(-4);
         }
       };
     }
@@ -479,9 +397,11 @@
     function makeImage(uri) {
       return new Promise(function (resolve, reject) {
         var image = new Image();
+
         image.onload = function () {
           resolve(image);
         };
+
         image.onerror = reject;
         image.src = uri;
       });
@@ -489,6 +409,7 @@
 
     function getAndEncode(url) {
       var TIMEOUT = 30000;
+
       if (domtoimage.impl.options.cacheBust) {
         // Cache bypass so we dont have CORS issues with cached images
         // Source: https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest#Bypassing_the_cache
@@ -497,24 +418,18 @@
 
       return new Promise(function (resolve) {
         var request = new XMLHttpRequest();
-
         request.onreadystatechange = done;
         request.ontimeout = timeout;
         request.responseType = 'blob';
         request.timeout = TIMEOUT;
 
-        if (
-          url.indexOf('http') === 0 &&
-          url.indexOf(window.location.origin) === -1 &&
-          domtoimage.impl.options.corsImg
-        ) {
+        if (url.indexOf('http') === 0 && url.indexOf(window.location.origin) === -1 && domtoimage.impl.options.corsImg) {
           var method = domtoimage.impl.options.corsImg.method || 'GET';
           method = method.toUpperCase(method) === 'POST' ? 'POST' : 'GET';
-
           var reqUrl = domtoimage.impl.options.corsImg.url || '';
           reqUrl = reqUrl.replace('#{cors}', url);
-
           var data = domtoimage.impl.options.corsImg.data || '';
+
           try {
             data = JSON.parse(JSON.stringify(data));
           } catch (e) {
@@ -528,13 +443,13 @@
             }
           });
           request.open(method, reqUrl, true);
-
           var isJson = false;
           var headers = domtoimage.impl.options.corsImg.headers || {};
           Object.keys(headers).forEach(function (key) {
             if (headers[key].indexOf('application/json') !== -1) {
               isJson = true;
             }
+
             request.setRequestHeader(key, headers[key]);
           });
           request.send(isJson ? JSON.stringify(data) : data);
@@ -544,8 +459,10 @@
         }
 
         var placeholder;
+
         if (domtoimage.impl.options.imagePlaceholder) {
           var split = domtoimage.impl.options.imagePlaceholder.split(/,/);
+
           if (split && split[1]) {
             placeholder = split[1];
           }
@@ -558,19 +475,19 @@
             if (placeholder) {
               resolve(placeholder);
             } else {
-              fail(
-                'cannot fetch resource: ' + url + ', status: ' + request.status
-              );
+              fail('cannot fetch resource: ' + url + ', status: ' + request.status);
             }
 
             return;
           }
 
           var encoder = new FileReader();
+
           encoder.onloadend = function () {
             var content = encoder.result.split(/,/)[1];
             resolve(content);
           };
+
           encoder.readAsDataURL(request.response);
         }
 
@@ -578,12 +495,7 @@
           if (placeholder) {
             resolve(placeholder);
           } else {
-            fail(
-              'timeout of ' +
-                TIMEOUT +
-                'ms occured while fetching resource: ' +
-                url
-            );
+            fail('timeout of ' + TIMEOUT + 'ms occured while fetching resource: ' + url);
           }
         }
 
@@ -615,7 +527,9 @@
     function asArray(arrayLike) {
       var array = [];
       var length = arrayLike.length;
+
       for (var i = 0; i < length; i++) array.push(arrayLike[i]);
+
       return array;
     }
 
@@ -643,14 +557,13 @@
 
   function newInliner() {
     var URL_REGEX = /url\(['"]?([^'"]+?)['"]?\)/g;
-
     return {
       inlineAll: inlineAll,
       shouldProcess: shouldProcess,
       impl: {
         readUrls: readUrls,
-        inline: inline,
-      },
+        inline: inline
+      }
     };
 
     function shouldProcess(string) {
@@ -660,49 +573,41 @@
     function readUrls(string) {
       var result = [];
       var match;
+
       while ((match = URL_REGEX.exec(string)) !== null) {
         result.push(match[1]);
       }
+
       return result.filter(function (url) {
         return !util.isDataUrl(url);
       });
     }
 
     function inline(string, url, baseUrl, get) {
-      return Promise.resolve(url)
-        .then(function (url) {
-          return baseUrl ? util.resolveUrl(url, baseUrl) : url;
-        })
-        .then(get || util.getAndEncode)
-        .then(function (data) {
-          return util.dataAsUrl(data, util.mimeType(url));
-        })
-        .then(function (dataUrl) {
-          return string.replace(urlAsRegex(url), '$1' + dataUrl + '$3');
-        });
+      return Promise.resolve(url).then(function (url) {
+        return baseUrl ? util.resolveUrl(url, baseUrl) : url;
+      }).then(get || util.getAndEncode).then(function (data) {
+        return util.dataAsUrl(data, util.mimeType(url));
+      }).then(function (dataUrl) {
+        return string.replace(urlAsRegex(url), '$1' + dataUrl + '$3');
+      });
 
       function urlAsRegex(url) {
-        return new RegExp(
-          '(url\\([\'"]?)(' + util.escape(url) + ')([\'"]?\\))',
-          'g'
-        );
+        return new RegExp('(url\\([\'"]?)(' + util.escape(url) + ')([\'"]?\\))', 'g');
       }
     }
 
     function inlineAll(string, baseUrl, get) {
       if (nothingToInline()) return Promise.resolve(string);
-
-      return Promise.resolve(string)
-        .then(readUrls)
-        .then(function (urls) {
-          var done = Promise.resolve(string);
-          urls.forEach(function (url) {
-            done = done.then(function (string) {
-              return inline(string, url, baseUrl, get);
-            });
+      return Promise.resolve(string).then(readUrls).then(function (urls) {
+        var done = Promise.resolve(string);
+        urls.forEach(function (url) {
+          done = done.then(function (string) {
+            return inline(string, url, baseUrl, get);
           });
-          return done;
         });
+        return done;
+      });
 
       function nothingToInline() {
         return !shouldProcess(string);
@@ -714,54 +619,40 @@
     return {
       resolveAll: resolveAll,
       impl: {
-        readAll: readAll,
-      },
+        readAll: readAll
+      }
     };
 
     function resolveAll() {
-      return readAll(document)
-        .then(function (webFonts) {
-          return Promise.all(
-            webFonts.map(function (webFont) {
-              return webFont.resolve();
-            })
-          );
-        })
-        .then(function (cssStrings) {
-          return cssStrings.join('\n');
-        });
+      return readAll(document).then(function (webFonts) {
+        return Promise.all(webFonts.map(function (webFont) {
+          return webFont.resolve();
+        }));
+      }).then(function (cssStrings) {
+        return cssStrings.join('\n');
+      });
     }
 
     function readAll() {
-      return Promise.resolve(util.asArray(document.styleSheets))
-        .then(getCssRules)
-        .then(selectWebFontRules)
-        .then(function (rules) {
-          return rules.map(newWebFont);
-        });
+      return Promise.resolve(util.asArray(document.styleSheets)).then(getCssRules).then(selectWebFontRules).then(function (rules) {
+        return rules.map(newWebFont);
+      });
 
       function selectWebFontRules(cssRules) {
-        return cssRules
-          .filter(function (rule) {
-            return rule.type === CSSRule.FONT_FACE_RULE;
-          })
-          .filter(function (rule) {
-            return inliner.shouldProcess(rule.style.getPropertyValue('src'));
-          });
+        return cssRules.filter(function (rule) {
+          return rule.type === CSSRule.FONT_FACE_RULE;
+        }).filter(function (rule) {
+          return inliner.shouldProcess(rule.style.getPropertyValue('src'));
+        });
       }
 
       function getCssRules(styleSheets) {
         var cssRules = [];
         styleSheets.forEach(function (sheet) {
           try {
-            util
-              .asArray(sheet.cssRules || [])
-              .forEach(cssRules.push.bind(cssRules));
+            util.asArray(sheet.cssRules || []).forEach(cssRules.push.bind(cssRules));
           } catch (e) {
-            console.log(
-              'Error while reading CSS rules from ' + sheet.href,
-              e.toString()
-            );
+            console.log('Error while reading CSS rules from ' + sheet.href, e.toString());
           }
         });
         return cssRules;
@@ -775,7 +666,7 @@
           },
           src: function () {
             return webFontRule.style.getPropertyValue('src');
-          },
+          }
         };
       }
     }
@@ -785,63 +676,45 @@
     return {
       inlineAll: inlineAll,
       impl: {
-        newImage: newImage,
-      },
+        newImage: newImage
+      }
     };
 
     function newImage(element) {
       return {
-        inline: inline,
+        inline: inline
       };
 
       function inline(get) {
         if (util.isDataUrl(element.src)) return Promise.resolve();
-
-        return Promise.resolve(element.src)
-          .then(get || util.getAndEncode)
-          .then(function (data) {
-            return util.dataAsUrl(data, util.mimeType(element.src));
-          })
-          .then(function (dataUrl) {
-            return new Promise(function (resolve, reject) {
-              element.onload = resolve;
-              element.onerror = reject;
-              element.src = dataUrl;
-            });
+        return Promise.resolve(element.src).then(get || util.getAndEncode).then(function (data) {
+          return util.dataAsUrl(data, util.mimeType(element.src));
+        }).then(function (dataUrl) {
+          return new Promise(function (resolve, reject) {
+            element.onload = resolve;
+            element.onerror = reject;
+            element.src = dataUrl;
           });
+        });
       }
     }
 
     function inlineAll(node) {
       if (!(node instanceof Element)) return Promise.resolve(node);
-
       return inlineBackground(node).then(function () {
-        if (node instanceof HTMLImageElement) return newImage(node).inline();
-        else
-          return Promise.all(
-            util.asArray(node.childNodes).map(function (child) {
-              return inlineAll(child);
-            })
-          );
+        if (node instanceof HTMLImageElement) return newImage(node).inline();else return Promise.all(util.asArray(node.childNodes).map(function (child) {
+          return inlineAll(child);
+        }));
       });
 
       function inlineBackground(node) {
         var background = node.style.getPropertyValue('background');
-
         if (!background) return Promise.resolve(node);
-
-        return inliner
-          .inlineAll(background)
-          .then(function (inlined) {
-            node.style.setProperty(
-              'background',
-              inlined,
-              node.style.getPropertyPriority('background')
-            );
-          })
-          .then(function () {
-            return node;
-          });
+        return inliner.inlineAll(background).then(function (inlined) {
+          node.style.setProperty('background', inlined, node.style.getPropertyPriority('background'));
+        }).then(function () {
+          return node;
+        });
       }
     }
   }

@@ -25,7 +25,8 @@
     "mocha": "^2.2.4"
   },
   "scripts": {
-    "test": "./node_modules/.bin/grunt test"
+    "test": "./node_modules/.bin/grunt test",
+    "publish": "rm -rf dist && mkdir dist && babel src -d dist --copy-files"
   },
   "repository": {
     "type": "git",
